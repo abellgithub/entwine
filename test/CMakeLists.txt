@@ -9,6 +9,7 @@ add_executable(entwine-test
     unit/build.cpp
     unit/read.cpp
 )
+compile_settings(entwine-test)
 
 configure_file(unit/config.hpp.in "${CMAKE_CURRENT_BINARY_DIR}/unit/config.hpp")
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/unit)

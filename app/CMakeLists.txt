@@ -14,6 +14,7 @@ find_package(Threads REQUIRED)
 
 add_executable(app ${SOURCES})
 add_dependencies(app entwine)
+compile_settings(app)
 
 target_link_libraries(app
     entwine

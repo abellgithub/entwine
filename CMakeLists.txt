@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.8)
+cmake_minimum_required(VERSION 3.1)
 
 project(entwine)
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules" ${CMAKE_MODULE_PATH})
@@ -20,7 +20,6 @@ endif()
 
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU" OR
     ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
-    add_definitions(${CMAKE_CXX_FLAGS} "-std=c++11")
     add_definitions(${CMAKE_CXX_FLAGS} "-Wno-deprecated-declarations")
     add_definitions(${CMAKE_CXX_FLAGS} "-Wall")
     add_definitions(${CMAKE_CXX_FLAGS} "-pedantic")
@@ -57,15 +56,6 @@ include_directories("${CMAKE_CURRENT_BINARY_DIR}/include")
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/json.cmake")
 
-if (ENTWINE_JSONCPP_INCLUDE_DIR)
-    MESSAGE("Using system JsonCpp")
-    include_directories(${ENTWINE_JSONCPP_INCLUDE_DIR})
-else()
-    MESSAGE("Using bundled JsonCpp")
-    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/entwine/third")
-    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/entwine/third/json")
-endif()
-
 set(PDAL_FIND_VERSION 1.8)
 find_package(PDAL ${PDAL_FIND_VERSION} REQUIRED CONFIG NO_POLICY_SCOPE)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
@@ -97,6 +87,8 @@ else()
     message("Curl NOT found")
 endif()
 
+find_package(LASzip 3.1)
+
 find_package(OpenSSL 1.0.1)
 if (OPENSSL_FOUND)
     message("Found OpenSSL ${OPENSSL_VERSION}")
@@ -111,8 +103,7 @@ else()
     message("Google storage IO will not be available")
 endif()
 
-
-get_target_property(PDALCPP_INCLUDE_DIRS pdalcpp INTERFACE_INCLUDE_DIRECTORIES)
+#get_target_property(PDALCPP_INCLUDE_DIRS pdalcpp INTERFACE_INCLUDE_DIRECTORIES)
 if (PDALCPP_INCLUDE_DIRS)
     message("Including from PDAL: ${PDALCPP_INCLUDE_DIRS}")
     include_directories(${PDALCPP_INCLUDE_DIRS})
@@ -123,13 +114,26 @@ endif()
 
 mark_as_advanced(CLEAR PDAL_INCLUDE_DIRS)
 mark_as_advanced(CLEAR PDAL_LIBRARIES)
-include_directories(${PDAL_INCLUDE_DIRS})
 
 if (CMAKE_MAJOR_VERSION GREATER 2)
     cmake_policy(SET CMP0042 NEW) # osx rpath
 endif()
 
 include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}")
+
+function(compile_settings target)
+    set_property(TARGET ${target} PROPERTY CXX_STANDARD 11)
+    set_property(TARGET ${target} PROPERTY CXX_STANDARD_REQUIRED TRUE)
+
+    target_include_directories(${target}
+        PRIVATE
+            ${CURL_INCLUDE_DIR}
+            ${OPENSSL_INCLUDE_DIR}
+            ${ENTWINE_JSONCPP_INCLUDE_DIR}
+            ${PDAL_INCLUDE_DIRS}
+            ${LASZIP_INCLUDE_DIR}
+)
+endfunction()
 
 add_subdirectory(entwine)
 add_subdirectory(app)
@@ -144,38 +148,49 @@ set(OBJS
     $<TARGET_OBJECTS:util>
 )
 
+compile_settings(formats)
+compile_settings(reader)
+compile_settings(io)
+compile_settings(third)
+compile_settings(builder)
+compile_settings(types)
+compile_settings(util)
+
 if (MSVC)
     add_library(entwine STATIC ${OBJS})
     target_link_libraries(entwine wsock32 ws2_32)
 else()
     add_library(entwine SHARED ${OBJS})
 endif()
+compile_settings(entwine)
 
-target_link_libraries(
-    entwine
+target_link_libraries(entwine
     PUBLIC
-    pdalcpp pdal_util
-    ${LZMA_LIBRARY}
-    ${CMAKE_DL_LIBS})
+        ${PDAL_LIBRARIES}
+        ${LZMA_LIBRARY}
+        ${CMAKE_DL_LIBS}
+        ${ENTWINE_JSONCPP_LIB_NAME}
+    PRIVATE
+        ${CURL_LIBRARIES}
+        ${SHLWAPI}
+        ${OPENSSL_LIBRARIES}
+        ${LASZIP_LIBRARIES}
+)
 
-target_link_libraries(entwine ${JSON_CPP_LINK_TYPE} ${ENTWINE_JSONCPP_LIB_NAME})
+target_include_directories(builder
+    PRIVATE
+        ${CURL_INCLUDE_DIR}
+        ${OPENSSL_INCLUDE_DIR}
+        ${ENTWINE_JSONCPP_INCLUDE_DIR}
+        ${PDAL_INCLUDE_DIRS}
+        ${LASZIP_INCLUDE_DIRS}
+)
 
-if (WIN32)
-    target_link_libraries(entwine PRIVATE ${SHLWAPI})
-endif()
-
-target_link_libraries(entwine PRIVATE ${CURL_LIBRARIES})
-target_include_directories(entwine PRIVATE "${CURL_INCLUDE_DIR}")
-
-target_link_libraries(entwine PRIVATE ${OPENSSL_LIBRARIES})
-target_include_directories(entwine PRIVATE "${OPENSSL_INCLUDE_DIR}")
-
-set_target_properties(
-    entwine
+set_target_properties(entwine
     PROPERTIES
-    VERSION ${ENTWINE_BUILD_VERSION}
-    SOVERSION ${ENTWINE_API_VERSION}
-    CLEAN_DIRECT_OUTPUT 1)
+        VERSION ${ENTWINE_BUILD_VERSION}
+        SOVERSION ${ENTWINE_API_VERSION}
+        CLEAN_DIRECT_OUTPUT 1)
 
 install(TARGETS entwine DESTINATION lib EXPORT entwine-targets)
 
