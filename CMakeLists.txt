@@ -166,11 +166,11 @@ compile_settings(entwine)
 
 target_link_libraries(entwine
     PUBLIC
-        ${PDAL_LIBRARIES}
         ${LZMA_LIBRARY}
         ${CMAKE_DL_LIBS}
         ${ENTWINE_JSONCPP_LIB_NAME}
     PRIVATE
+        ${PDAL_LIBRARIES}
         ${CURL_LIBRARIES}
         ${SHLWAPI}
         ${OPENSSL_LIBRARIES}

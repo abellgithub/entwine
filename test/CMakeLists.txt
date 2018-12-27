@@ -21,7 +21,7 @@ target_link_libraries(entwine-test entwine gtest gtest_main)
 set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
 
 add_custom_target(
-    test
+    dotest
     COMMAND entwine-test --gtest_color=yes
     DEPENDS entwine-test
     WORKING_DIRECTORY ${CMAKE_PROJECT_DIR}
