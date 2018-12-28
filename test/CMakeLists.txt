@@ -14,7 +14,11 @@ compile_settings(entwine-test)
 configure_file(unit/config.hpp.in "${CMAKE_CURRENT_BINARY_DIR}/unit/config.hpp")
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/unit)
 
-target_link_libraries(entwine-test entwine gtest gtest_main)
+target_link_libraries(entwine-test
+    entwine
+    ${PDAL_LIBRARIES}
+    gtest
+    gtest_main)
 
 # We're overriding the test with a custom command for individual test output
 # and colors, which cmake doesn't like.

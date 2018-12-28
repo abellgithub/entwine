@@ -18,6 +18,7 @@ compile_settings(app)
 
 target_link_libraries(app
     entwine
+    ${PDAL_LIBRARIES}
     ${Backtrace_LIBRARIES}
     ${CMAKE_DL_LIBS}
     ${CMAKE_THREAD_LIBS_INIT}
